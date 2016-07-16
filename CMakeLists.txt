@@ -27,7 +27,8 @@ include_directories(${GL_INC} ${GLEW_INC} ${GLUT_INC} ${CMAKE_CURRENT_SOURCE_DIR
 include(src/CMakeLists.txt)
 
 add_executable (clock
-        main.cpp)
+        main.cpp
+        ${SOURCE_FILES})
 
 IF (APPLE)
     include_directories (/System/Library/Frameworks)

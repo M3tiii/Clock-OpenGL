@@ -17,8 +17,15 @@
 #endif
 #include <GLFW/glfw3.h>
 
+//CLASSES
 #include <Rack.h>
 #include <Clock.h>
+
+//EXTRERNAL LIBS
+#include <lodepng.h>
+//#include <lodepng.cpp>
+
+//MODELS
 #include "product/cube.c"
 
 using namespace std;
@@ -40,12 +47,12 @@ float speed = 0;
 bool loadModels = true;
 std::string source = "/Users/kon/GitHub/clock-project/";
 vector<Object> Objects;
+GLuint tex;
 
 // ----------------------------------------------------------
 // Function DEFINITION
 // ----------------------------------------------------------
-void key_callback(GLFWwindow* window, int key,
-                  int scancode, int action, int mods) {
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
         if (key == GLFW_KEY_LEFT) speed = -3.14;
         if (key == GLFW_KEY_RIGHT) speed = 3.14;
@@ -72,13 +79,31 @@ void initOpenGLProgram(GLFWwindow* window) {
 
     glfwSetKeyCallback(window, key_callback);
 
+
+
+    glActiveTexture(GL_TEXTURE0);
+
+    //Wczytanie do pamięci komputera
+    std::vector<unsigned char> image;   //Alokuj wektor do wczytania obrazka
+    unsigned width, height;   //Zmienne do których wczytamy wymiary obrazka
+    //Wczytaj obrazek
+    unsigned error = lodepng::decode(image, width, height, "/Users/kon/GitHub/clock-project/source/texture.png");
+    //Import do pamięci karty graficznej
+    glGenTextures(1, &tex); //Zainicjuj jeden uchwyt
+    glBindTexture(GL_TEXTURE_2D, tex); //Uaktywnij uchwyt
+    //Wczytaj obrazek do pamięci KG skojarzonej z uchwytem
+    glTexImage2D(GL_TEXTURE_2D, 0, 4, width, height, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char*)image.data());
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
 }
 
 //Procedura rysuj¹ca zawartoœæ sceny
 void drawScene(GLFWwindow* window, float angle) {
 
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT); //Wykonaj czyszczenie bufora kolorów
-
 
     glm::mat4 V = glm::lookAt( //Wylicz macierz widoku
             glm::vec3(0.0f, 0.0f, -2.0f),
@@ -101,16 +126,13 @@ void drawScene(GLFWwindow* window, float angle) {
 
 
     //Narysuj model
+    glBindTexture(GL_TEXTURE_2D, tex); //Wybierz teksturę
     glEnableClientState(GL_VERTEX_ARRAY); //W³¹cz u¿ywanie tablicy wierzcho³ków
-//    glEnableClientState(GL_COLOR_ARRAY); //W³¹cz u¿ywanie tablicy kolorów
-
     glVertexPointer(3, GL_FLOAT, 0, cubePositions); //Wska¿ tablicê wierzcho³ków
-//    glColorPointer(3, GL_FLOAT, 0, myColors); //Wska¿ tablicê kolorów
-
+    glTexCoordPointer(2, GL_FLOAT, 0, cubeTexels); //Zdefiniuj tablicę, która jest źródłem współrzędnych teksturowania
     glDrawArrays(GL_TRIANGLES, 0, cubeVertices); //Wykonaj rysowanie
-
     glDisableClientState(GL_VERTEX_ARRAY); //Wy³¹cz u¿ywanie tablicy wierzcho³ków
-    glDisableClientState(GL_COLOR_ARRAY); //Wy³¹cz u¿ywanie tablicy kolorów
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY); //Wyłącz używanie tablicy współrzędnych teksturowania
 //    glBufferData(GL_ARRAY_BUFFER, cubeVertices * sizeof(glm::vec3), &cubePositions[0], GL_STATIC_DRAW);
 
     glfwSwapBuffers(window);
