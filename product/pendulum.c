@@ -1,8 +1,8 @@
-// This is a .c file for the model: wahadlo
+// This is a .c file for the model: pendulum
 
-int wahadloVertices = 426;
+int pendulumVertices = 426;
 
-float wahadloPositions[1278] = 
+float pendulumPositions[1278] = 
 {
 -0.045312, 2.14674, 0.117811, 
 0.044868, 2.14674, 0.117811, 
@@ -432,7 +432,7 @@ float wahadloPositions[1278] =
 0.121915, 1.65927, 0.076168, 
 };
 
-float wahadloTexels[852] = 
+float pendulumTexels[852] = 
 {
 0.1275, 0.9988, 
 0.1918, 0.9999, 
@@ -862,7 +862,7 @@ float wahadloTexels[852] =
 0.3766, 0.6581, 
 };
 
-float wahadloNormals[1278] = 
+float pendulumNormals[1278] = 
 {
 0, 0, 1, 
 0, 0, 1, 

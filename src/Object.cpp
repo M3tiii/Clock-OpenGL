@@ -2,8 +2,8 @@
 
 namespace Objects {
 
-    Object::Object(int _id, string _name, char* _pathTex, char* _pathRef, vec3 rotate, vec3 translate, vec3 scale) {
-        this->id = _id;
+    Object::Object(int _type, string _name, char* _pathTex, char* _pathRef, vec3 rotate, vec3 translate, vec3 scale) {
+        this->type = _type;
         this->name = _name;
 
         this->texModel = readTexture(_pathTex);

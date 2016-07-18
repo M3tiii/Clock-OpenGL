@@ -29,9 +29,16 @@
 
 //MODELS
 #include "product/cube.c"
+//#include "product/sRack.c"
+#include "product/lRack.c"
+#include "product/sTip.c"
+#include "product/lTip.c"
+#include "product/pendulum.c"
+#include "product/clock.c"
 
 using namespace std;
 using namespace glm;
+using namespace Objects;
 
 // ----------------------------------------------------------
 // Function Prototypes
@@ -51,7 +58,7 @@ float speed_x = 0; // [radiany/s]
 float speed_y = 0; // [radiany/s]
 bool loadModels = true;
 std::string source = "/Users/kon/GitHub/clock-project/";
-//vector<Object> Objects;
+vector<Object> World;
 
 glm::mat4 P;
 glm::mat4 V;
@@ -160,7 +167,6 @@ void initOpenGLProgram(GLFWwindow* window) {
 //Procedura rysuj¹ca zawartoœæ sceny
 void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 
-
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT); //Wykonaj czyszczenie bufora kolorów
 
     P = glm::perspective(50 * PI / 180, 1.0f, 1.0f, 50.0f); //Wylicz macierz rzutowania
@@ -177,7 +183,9 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 
     glLoadMatrixf(glm::value_ptr(V*M)); //Załaduj wyliczoną macierz do OpenGL
 
-    drawObject(*test, shaderProgram, V, P, 0, 0, test->rotate, test->translate, test->scale);
+    for (int i = 0; i < World.size(); i++) {
+        drawObject(World[i], shaderProgram, V, P, 0, 0, World[i].rotate, World[i].translate, World[i].scale);
+    }
 
     glDisableVertexAttribArray(0);
     glfwSwapBuffers(window);
@@ -185,19 +193,49 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
 
 
 int createAllModels() {
-//    Objects.reserve(count);
-//    Objects.push_back( Object(0,1,1,1,source,"cube") );
+    World.push_back( Object(3, "sTip", "/Users/kon/GitHub/clock-project/source/metal.png",
+                            "/Users/kon/GitHub/clock-project/source/metal.png", vec3(0,0,0), vec3(0,0,0), vec3(1,1,1)) );
+    World.push_back( Object(4, "lTip", "/Users/kon/GitHub/clock-project/source/metal.png",
+                            "/Users/kon/GitHub/clock-project/source/metal.png", vec3(0,0,0), vec3(0,0,0), vec3(1,1,1)) );
 
     if(loadModels) {
-        createModel("/Users/kon/GitHub/clock-project/", "cube");
-        test->loadModel(cubeVertices, cubePositions, cubeTexels, cubeNormals);
+//        createModel("/Users/kon/GitHub/clock-project/", "cube");
+//        createModel("/Users/kon/GitHub/clock-project/", "clock");
+//        createModel("/Users/kon/GitHub/clock-project/", "pendulum");
+//        createModel("/Users/kon/GitHub/clock-project/", "sTip");
+//        createModel("/Users/kon/GitHub/clock-project/", "lTip");
+//        createModel("/Users/kon/GitHub/clock-project/", "sRack");
+//        createModel("/Users/kon/GitHub/clock-project/", "lRack");
+    }
+    for (int i = 0; i < World.size(); i++) {
+        switch (World[i].type) {
+            case 0:
+                World[i].loadModel(cubeVertices, cubePositions, cubeTexels, cubeNormals);
+                break;
+            case 1:
+                World[i].loadModel(clockVertices, clockPositions, clockTexels, clockNormals);
+                break;
+            case 2:
+                World[i].loadModel(pendulumVertices, pendulumPositions, pendulumTexels, pendulumNormals);
+                break;
+            case 3:
+                World[i].loadModel(sTipVertices, sTipPositions, sTipTexels, sTipNormals);
+                break;
+            case 4:
+                World[i].loadModel(lTipVertices, lTipPositions, lTipTexels, lTipNormals);
+                break;
+            case 5:
+//                World[i].loadModel(sRackVertices, sRackPositions, sRackTexels, sRackNormals);
+                break;
+            case 6:
+                World[i].loadModel(lRackVertices, lRackPositions, lRackTexels, lRackNormals);
+                break;
+        }
     }
 
 }
 
-void drawObject(Objects::Object object, ShaderProgram *shaderProgram,mat4 modelV, mat4 modelP, float rotation_x,float rotation_y, vec3 rotation, vec3 translate, vec3 scale) {
-
-    mat4 modelMatrix = object.M;
+void drawObject(Objects::Object object, ShaderProgram *shaderProgram,mat4 modelV, mat4 modelP, float rotation_x,float rotation_y, vec3 mrotation, vec3 mtranslate, vec3 mscale) {
 
     //WYKORZYSTANIE SHADERÓW XXX
 //    shaderProgram->use();
@@ -265,7 +303,7 @@ int main(int argc, char *argv[]) {
     }
 
     test = new Objects::Object(0, "cube", "/Users/kon/GitHub/clock-project/source/metal.png",
-                               "/Users/kon/GitHub/clock-project/source/metal.png", vec3(0,0,0), vec3(0,0,0), vec3(1,1,1));
+                               "/Users/kon/GitHub/clock-project/source/metal.png", vec3(0,0,0), vec3(0,0,0), vec3(0.1,0.1,0.1));
     createAllModels();
 
     initOpenGLProgram(window); //Operacje inicjujące

@@ -28,7 +28,7 @@ using namespace glm;
 namespace Objects {
     class Object {
     public:
-        int id;
+        int type;
         string path;
         string name;
         bool loaded = false;
@@ -52,7 +52,7 @@ namespace Objects {
         vec3 translate;
         vec3 scale;
 
-        Object(int _id, string _name, char* _pathTex, char* _pathRef, vec3 rotate, vec3 translate, vec3 scale);
+        Object(int _type, string _name, char* _pathTex, char* _pathRef, vec3 rotate, vec3 translate, vec3 scale);
 
         void draw();
 
