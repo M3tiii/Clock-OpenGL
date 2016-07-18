@@ -20,15 +20,18 @@
 //CLASSES
 #include <Rack.h>
 #include <Clock.h>
+#include <Object.h>
 
 //EXTRERNAL LIBS
-#include <lodepng.h>
-//#include <lodepng.cpp>
+//#include <lodepng.h>
+#include <shaderprogram.h>
+#include <loader.cpp>
 
 //MODELS
 #include "product/cube.c"
 
 using namespace std;
+using namespace glm;
 
 // ----------------------------------------------------------
 // Function Prototypes
@@ -36,30 +39,45 @@ using namespace std;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void error_callback(int error, const char* description);
 void initOpenGLProgram(GLFWwindow* window);
-void drawScene(GLFWwindow* window, float angle);
+void drawScene(GLFWwindow* window, float angle_x, float angle_y);
 int createAllModels();
-
+void drawObject(Objects::Object object, ShaderProgram *shaderProgram,mat4 mV, mat4 mP, float rotation_x,float rotation_y, vec3 rotacja, vec3 translacja, vec3 skalowanie);
+Objects::Object *test;
 // ----------------------------------------------------------
 // Global Variables
 // ----------------------------------------------------------
 const float PI = 3.141592653589793f;
-float speed = 0;
+float speed_x = 0; // [radiany/s]
+float speed_y = 0; // [radiany/s]
 bool loadModels = true;
 std::string source = "/Users/kon/GitHub/clock-project/";
-vector<Object> Objects;
-GLuint tex;
+//vector<Object> Objects;
+
+glm::mat4 P;
+glm::mat4 V;
+glm::mat4 M;
+
+//Uchwyty na shadery
+ShaderProgram *shaderProgram; //Wskaźnik na obiekt reprezentujący program cieniujący.
+
 
 // ----------------------------------------------------------
 // Function DEFINITION
 // ----------------------------------------------------------
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
-        if (key == GLFW_KEY_LEFT) speed = -3.14;
-        if (key == GLFW_KEY_RIGHT) speed = 3.14;
+        if (key == GLFW_KEY_LEFT) speed_y = -3.14;
+        if (key == GLFW_KEY_RIGHT) speed_y = 3.14;
+        if (key == GLFW_KEY_UP) speed_x = -3.14;
+        if (key == GLFW_KEY_DOWN) speed_x = 3.14;
     }
 
+
     if (action == GLFW_RELEASE) {
-        speed = 0;
+        if (key == GLFW_KEY_LEFT) speed_y = 0;
+        if (key == GLFW_KEY_RIGHT) speed_y = 0;
+        if (key == GLFW_KEY_UP) speed_x = 0;
+        if (key == GLFW_KEY_DOWN) speed_x = 0;
     }
 }
 
@@ -68,141 +86,209 @@ void error_callback(int error, const char* description) {
     fputs(description, stderr);
 }
 
+//Zwolnienie zasobów zajętych przez program
+void freeOpenGLProgram() {
+    //TODO
+//    delete shaderProgram; //Usunięcie programu cieniującego
+//
+//    glDeleteVertexArrays(1,&vao); //Usunięcie vao
+//    glDeleteBuffers(1,&bufVertices); //Usunięcie VBO z wierzchołkami
+//    glDeleteBuffers(1,&bufColors); //Usunięcie VBO z kolorami
+//    glDeleteBuffers(1,&bufNormals); //Usunięcie VBO z wektorami normalnymi
+//    glDeleteBuffers(1, &bufTexCoords); //Usunięcie VBO ze współrzędnymi teksturowania
+}
+
+//Tworzy bufor VBO z tablicy
+GLuint makeBuffer(void *data, int vertexCount, int vertexSize) {
+    GLuint handle;
+
+    glGenBuffers(1,&handle);//Wygeneruj uchwyt na Vertex Buffer Object (VBO), który będzie zawierał tablicę danych
+    glBindBuffer(GL_ARRAY_BUFFER,handle);  //Uaktywnij wygenerowany uchwyt VBO
+    glBufferData(GL_ARRAY_BUFFER, vertexCount*vertexSize, data, GL_STATIC_DRAW);//Wgraj tablicę do VBO
+
+    return handle;
+}
+
+//Przypisuje bufor VBO do atrybutu
+void assignVBOtoAttribute(ShaderProgram *shaderProgram,char* attributeName, GLuint bufVBO, int vertexSize) {
+    GLuint location=shaderProgram->getAttribLocation(attributeName); //Pobierz numery slotów dla atrybutu
+    glBindBuffer(GL_ARRAY_BUFFER,bufVBO);  //Uaktywnij uchwyt VBO
+    glEnableVertexAttribArray(location); //Włącz używanie atrybutu o numerze slotu zapisanym w zmiennej location
+    glVertexAttribPointer(location,vertexSize,GL_FLOAT, GL_FALSE, 0, NULL); //Dane do slotu location mają być brane z aktywnego VBO
+}
+
+void loadObjectVBO(Objects::Object *object) {
+    //Zbuduj VBO z danymi obiektu do narysowania
+    GLuint vb, vuv, vn;
+    GLuint vao;
+    vb = makeBuffer((*object).vertices, (*object).verCount, sizeof(glm::vec3)); //VBO ze wspó³rzêdnymi wierzcho³ków
+    vuv = makeBuffer((*object).vtexture, (*object).verCount, sizeof(glm::vec2));//VBO z UV
+    vn = makeBuffer((*object).vnormals, (*object).verCount, sizeof(glm::vec3));//VBO z wektorami normalnymi wierzcho³ków
+
+    glGenVertexArrays(1, &vao); //Wygeneruj uchwyt na VAO i zapisz go do zmiennej globalnej
+    glBindVertexArray(vao); //Uaktywnij nowo utworzony VAO
+
+    assignVBOtoAttribute(shaderProgram, "vertex", vb, 3); //"vertex" odnosi siê do deklaracji "in vec4 vertex;" w vertex shaderze
+    assignVBOtoAttribute(shaderProgram, "vertexUV", vuv, 2); //"vertexUV" odnosi siê do deklaracji "in vec2 vertexUV;" w vertex shaderze
+    assignVBOtoAttribute(shaderProgram, "normal", vn, 3); //"bufNormals" odnosi siê do deklaracji "in vec3 normal;" w vertex shaderze
+
+    (*object).setValue(vao, (*object).objectVao);
+    (*object).setValue(vb, (*object).vertexbuffer);
+    (*object).setValue(vuv, (*object).vertexUV);
+    (*object).setValue(vn, (*object).bufNormals);
+}
+
 //Procedura inicjująca
 void initOpenGLProgram(GLFWwindow* window) {
-    //************Tutaj umieszczaj kod, który nale¿y wykonaæ raz, na pocz¹tku programu************
-    glClearColor(0, 0, 0, 1); //Czyœæ ekran na czarno
-    //glEnable(GL_LIGHTING); //W³¹cz tryb cieniowania
-    glEnable(GL_LIGHT0); //W³¹cz domyslne œwiat³o
-    glEnable(GL_DEPTH_TEST); //W³¹cz u¿ywanie Z-Bufora
-    glEnable(GL_COLOR_MATERIAL); //glColor3d ma modyfikowaæ w³asnoœci materia³u
+
+    glClearColor(0, 0, 0, 1);
+    glEnable(GL_LIGHT0); //Włącz domyslne światło
+    glEnable(GL_DEPTH_TEST); //Włącz używanie Z-Bufora
+//    glEnable(GL_LIGHTING); //Włącz tryb cieniowania
+//    glEnable(GL_COLOR_MATERIAL); //glColor3d ma modyfikować własności meteriału
+
+    glEnable(GL_TEXTURE_2D); //Włączenie textur, niepotrzebne w shaderach ? XXX
 
     glfwSetKeyCallback(window, key_callback);
 
-
-
-    glActiveTexture(GL_TEXTURE0);
-
-    //Wczytanie do pamięci komputera
-    std::vector<unsigned char> image;   //Alokuj wektor do wczytania obrazka
-    unsigned width, height;   //Zmienne do których wczytamy wymiary obrazka
-    //Wczytaj obrazek
-    unsigned error = lodepng::decode(image, width, height, "/Users/kon/GitHub/clock-project/source/texture.png");
-    //Import do pamięci karty graficznej
-    glGenTextures(1, &tex); //Zainicjuj jeden uchwyt
-    glBindTexture(GL_TEXTURE_2D, tex); //Uaktywnij uchwyt
-    //Wczytaj obrazek do pamięci KG skojarzonej z uchwytem
-    glTexImage2D(GL_TEXTURE_2D, 0, 4, width, height, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char*)image.data());
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //WYKORZYSTANIE SHADERÓW XXX
+//    shaderProgram=new ShaderProgram("/Users/kon/GitHub/clock-project/src/vshader.txt",NULL,"/Users/kon/GitHub/clock-project/src/fshader.txt"); //Wczytaj program cieniujący
+//    loadObjectVBO(test);
 
 }
 
 //Procedura rysuj¹ca zawartoœæ sceny
-void drawScene(GLFWwindow* window, float angle) {
+void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
+
 
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT); //Wykonaj czyszczenie bufora kolorów
 
-    glm::mat4 V = glm::lookAt( //Wylicz macierz widoku
-            glm::vec3(0.0f, 0.0f, -2.0f),
+    P = glm::perspective(50 * PI / 180, 1.0f, 1.0f, 50.0f); //Wylicz macierz rzutowania
+
+    V = glm::lookAt( //Wylicz macierz widoku
+            glm::vec3(0.0f, 1.0f, -0.2f),
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(0.0f, 1.0f, 0.0f));
 
-    glm::mat4 P = glm::perspective(50 * PI / 90, 1.0f, 1.0f, 50.0f); //Wylicz macierz rzutowania
-
-    //Za³aduj macierz rzutowania do OpenGL
-    glMatrixMode(GL_PROJECTION);
-    glLoadMatrixf(glm::value_ptr(P));
-
-    //PrzejdŸ w tryb pracy z macierz¹ Model-Widok
-    glMatrixMode(GL_MODELVIEW);
-
-    //Wylicz macierz obrotu o k¹t angle wokó³ osi (0,1,1)
+    //Wylicz macierz modelu rysowanego obiektu
     glm::mat4 M = glm::mat4(1.0f);
-    M = glm::rotate(M, angle, glm::vec3(0, 1, 1));
-    glLoadMatrixf(glm::value_ptr(V*M)); //Za³aduj wyliczon¹ macierz do OpenGL
+    M = glm::rotate(M, angle_x, glm::vec3(1, 0, 0));
+    M = glm::rotate(M, angle_y, glm::vec3(0, 1, 0));
 
+    glLoadMatrixf(glm::value_ptr(V*M)); //Załaduj wyliczoną macierz do OpenGL
 
-    //Narysuj model
-    glBindTexture(GL_TEXTURE_2D, tex); //Wybierz teksturę
-    glEnableClientState(GL_VERTEX_ARRAY); //W³¹cz u¿ywanie tablicy wierzcho³ków
-    glVertexPointer(3, GL_FLOAT, 0, cubePositions); //Wska¿ tablicê wierzcho³ków
-    glTexCoordPointer(2, GL_FLOAT, 0, cubeTexels); //Zdefiniuj tablicę, która jest źródłem współrzędnych teksturowania
-    glDrawArrays(GL_TRIANGLES, 0, cubeVertices); //Wykonaj rysowanie
-    glDisableClientState(GL_VERTEX_ARRAY); //Wy³¹cz u¿ywanie tablicy wierzcho³ków
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY); //Wyłącz używanie tablicy współrzędnych teksturowania
-//    glBufferData(GL_ARRAY_BUFFER, cubeVertices * sizeof(glm::vec3), &cubePositions[0], GL_STATIC_DRAW);
+    drawObject(*test, shaderProgram, V, P, 0, 0, test->rotate, test->translate, test->scale);
 
+    glDisableVertexAttribArray(0);
     glfwSwapBuffers(window);
-
 }
 
 
 int createAllModels() {
-    int count = 10;
-    Objects.reserve(count);
-    Objects.push_back( Object(0,1,1,1,source,"cube") );
+//    Objects.reserve(count);
+//    Objects.push_back( Object(0,1,1,1,source,"cube") );
 
     if(loadModels) {
-        Objects[0].loadModel();
+        createModel("/Users/kon/GitHub/clock-project/", "cube");
+        test->loadModel(cubeVertices, cubePositions, cubeTexels, cubeNormals);
     }
 
-    pos tmp = {
-            cubeVertices,
-            cubePositions,
-            cubeTexels,
-            cubeNormals
-        };
-    Objects[0].setModel(tmp);
-};
+}
+
+void drawObject(Objects::Object object, ShaderProgram *shaderProgram,mat4 modelV, mat4 modelP, float rotation_x,float rotation_y, vec3 rotation, vec3 translate, vec3 scale) {
+
+    mat4 modelMatrix = object.M;
+
+    //WYKORZYSTANIE SHADERÓW XXX
+//    shaderProgram->use();
+//
+//    glUniformMatrix4fv(shaderProgram->getUniformLocation("P"), 1, false, glm::value_ptr(modelP));
+//    glUniformMatrix4fv(shaderProgram->getUniformLocation("V"), 1, false, glm::value_ptr(modelV));
+//    glUniformMatrix4fv(shaderProgram->getUniformLocation("M"), 1, false, glm::value_ptr(modelMatrix));
+//    glUniform4f(shaderProgram->getUniformLocation("lightPos0"), 0, 2, 0, 1); //Przekazanie wspó³rzêdnych Ÿród³a œwiat³a do zmiennej jednorodnej lightPos0
+//
+//    glUniform1i(shaderProgram->getUniformLocation("WRITE SOURCE TO TEXTURE"), 0); //SET LOCATION TO TEXTURE
+//    glActiveTexture(GL_TEXTURE0);
+//    glBindTexture(GL_TEXTURE_2D, object.texModel);
+//
+//    glBindVertexArray(object.objectVao);
+//
+//    glDrawArrays(GL_TRIANGLES, 0, object.verCount);
+//
+//    glBindVertexArray(0);
+    //KONIEC
+
+
+    //WERSJA BEZ SHADERÓW XXX
+    glBindTexture(GL_TEXTURE_2D, object.texModel);
+
+    glEnableClientState(GL_VERTEX_ARRAY); //W³¹cz u¿ywanie tablicy wierzcho³ków
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY); //Włącz używanie tablicy współrzędnych teksturowania
+    glVertexPointer(3, GL_FLOAT, 0, object.vertices); //Wska¿ tablicê wierzcho³ków
+    glTexCoordPointer(2, GL_FLOAT, 0, object.vtexture); //Zdefiniuj tablicę, która jest źródłem współrzędnych teksturowania
+
+    glDrawArrays(GL_TRIANGLES, 0, object.verCount);
+
+    glDisableClientState(GL_VERTEX_ARRAY); //Wy³¹cz u¿ywanie tablicy wierzcho³ków
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY); //Wyłącz używanie tablicy współrzędnych teksturowania
+    //KONIEC
+}
 
 
 int main(int argc, char *argv[]) {
 
-    createAllModels();
+    GLFWwindow* window; //Wskaźnik na obiekt reprezentujący okno
 
-    GLFWwindow* window; //WskaŸnik na obiekt reprezentuj¹cy okno
+    glfwSetErrorCallback(error_callback);//Zarejestruj procedurę obsługi błędów
 
-    glfwSetErrorCallback(error_callback);//Zarejestruj procedurê obs³ugi b³êdów
-
-    if (!glfwInit()) { //Zainicjuj bibliotekê GLFW
-        fprintf(stderr, "Nie mo¿na zainicjowaæ GLFW.\n");
+    if (!glfwInit()) { //Zainicjuj bibliotekę GLFW
+        fprintf(stderr, "Nie można zainicjować GLFW.\n");
         exit(EXIT_FAILURE);
     }
 
-    window = glfwCreateWindow(500, 500, "OpenGL", NULL, NULL);  //Utwórz okno 500x500 o tytule "OpenGL" i kontekst OpenGL.
+    window = glfwCreateWindow(800, 800, "OpenGL", NULL, NULL);  //Utwórz okno 800x800 o tytule "OpenGL" i kontekst OpenGL.
 
-    if (!window) //Je¿eli okna nie uda³o siê utworzyæ, to zamknij program
+    if (!window) //Jeżeli okna nie udało się utworzyć, to zamknij program
     {
+        fprintf(stderr, "Nie można utworzyć okna.\n");
         glfwTerminate();
         exit(EXIT_FAILURE);
     }
 
-    glfwMakeContextCurrent(window); //Od tego momentu kontekst okna staje siê aktywny i polecenia OpenGL bêd¹ dotyczyæ w³aœnie jego.
+    glfwMakeContextCurrent(window); //Od tego momentu kontekst okna staje się aktywny i polecenia OpenGL będą dotyczyć właśnie jego.
     glfwSwapInterval(1); //Czekaj na 1 powrót plamki przed pokazaniem ukrytego bufora
 
-    if (glewInit() != GLEW_OK) { //Zainicjuj bibliotekê GLEW
-        fprintf(stderr, "Nie mo¿na zainicjowaæ GLEW.\n");
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) { //Zainicjuj bibliotekę GLEW
+        fprintf(stderr, "Nie można zainicjować GLEW.\n");
         exit(EXIT_FAILURE);
     }
-    glewInit();//
-    initOpenGLProgram(window); //Operacje inicjuj¹ce
 
-    float angle = 0; //K¹t obrotu torusa
+    test = new Objects::Object(0, "cube", "/Users/kon/GitHub/clock-project/source/metal.png",
+                               "/Users/kon/GitHub/clock-project/source/metal.png", vec3(0,0,0), vec3(0,0,0), vec3(1,1,1));
+    createAllModels();
+
+    initOpenGLProgram(window); //Operacje inicjujące
+
+    float angle_x = 0; //Kąt obrotu obiektu
+    float angle_y = 0; //Kąt obrotu obiektu
+
     glfwSetTime(0); //Wyzeruj licznik czasu
 
-    while (!glfwWindowShouldClose(window)) //Tak d³ugo jak okno nie powinno zostaæ zamkniête
+    //Główna pętla
+    while (!glfwWindowShouldClose(window)) //Tak długo jak okno nie powinno zostać zamknięte
     {
-        angle += speed*glfwGetTime(); //Zwiêksz k¹t o prêdkoœæ k¹tow¹ razy czas jaki up³yn¹³ od poprzedniej klatki
+        angle_x += speed_x*glfwGetTime(); //Zwiększ kąt o prędkość kątową razy czas jaki upłynął od poprzedniej klatki
+        angle_y += speed_y*glfwGetTime(); //Zwiększ kąt o prędkość kątową razy czas jaki upłynął od poprzedniej klatki
         glfwSetTime(0); //Wyzeruj licznik czasu
-        drawScene(window,angle); //Wykonaj procedurê rysuj¹c¹
-        glfwPollEvents(); //Wykonaj procedury callback w zaleznoœci od zdarzeñ jakie zasz³y.
+        drawScene(window,angle_x,angle_y); //Wykonaj procedurę rysującą
+        glfwPollEvents(); //Wykonaj procedury callback w zalezności od zdarzeń jakie zaszły.
     }
 
-    glfwDestroyWindow(window); //Usuñ kontekst OpenGL i okno
-    glfwTerminate(); //Zwolnij zasoby zajête przez GLFW
+    freeOpenGLProgram();
+
+    glfwDestroyWindow(window); //Usuń kontekst OpenGL i okno
+    glfwTerminate(); //Zwolnij zasoby zajęte przez GLFW
     exit(EXIT_SUCCESS);
 }
 

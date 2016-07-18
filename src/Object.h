@@ -1,68 +1,67 @@
+#pragma once
 
 #ifndef _OBJECT_H_
 #define _OBJECT_H_
 
-#include <loader.cpp>
+#include <lodepng.h>
+#include <vector>
+#include <math.h>
+#include <string.h>
+#include <iostream>
+#include <cstdio>
+
+#include "GL/glew.h"
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#include "GLUT/glut.h"
+#include "glm/glm.hpp"
+#include "glm/vec3.hpp"
+#include "glm/vec2.hpp"
+#include "glm/gtc/type_ptr.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+
+
 
 using namespace std;
+using namespace glm;
 
-struct coor {
-    int x;
-    int y;
-    int z;
-};
+namespace Objects {
+    class Object {
+    public:
+        int id;
+        string path;
+        string name;
+        bool loaded = false;
 
-struct pos {
-    int vertices;
-    float * positions;
-    float * texels;
-    float * normals;
-};
+        int verCount;
+        float* vertices;
+        float * vtexture;
+        float * vnormals;
 
-class Object {
-    int id;
-    coor coordinates;
-    pos actual;
-    string path;
-    string name;
+        mat4 M;
 
-    bool loaded = false;
-public:
-    Object (int, int, int, int, string, string);
-    void draw();
-    string loadModel();
-    void setModel(pos tmp);
-    void setCoordinates(int _x, int _y, int _z);
-    coor getCoordinates();
-    bool isLoaded();
-};
-Object::Object (int _id, int _x, int _y, int _z, string _path, string _name){
-    id = _id;
-    setCoordinates(_x, _y, _z);
-    path = _path;
-    name = _name;
-};
-string Object::loadModel() {
-    cout << "Loading model of " << name << " ..." << endl;
-    createModel(path, name);
-    cout << "Loader complited." << endl;
-    return name;
-};
-void Object::setModel(pos tmp) {
-    actual = tmp;
-    loaded = true;
-    cout << "Set model of " << name << endl;
-};
-void Object::setCoordinates(int _x, int _y, int _z) {
-    coordinates.x = _x;
-    coordinates.y = _y;
-    coordinates.z = _z;
-};
-coor Object::getCoordinates() {
-    return coordinates;
-};
-bool Object::isLoaded() {
-    return loaded;
-};
+        GLuint objectVao;
+        GLuint vertexbuffer;
+        GLuint vertexUV;
+        GLuint bufNormals;
 
+        GLint texModel;
+        GLint texRef;
+
+        vec3 rotate;
+        vec3 translate;
+        vec3 scale;
+
+        Object(int _id, string _name, char* _pathTex, char* _pathRef, vec3 rotate, vec3 translate, vec3 scale);
+
+        void draw();
+
+        void loadModel(int _v, float* _p, float* _t, float* _n);
+
+        GLuint readTexture(char* filename);
+
+        void setValue(GLuint value, GLuint &valueToSet);
+    };
+    extern Object object;
+}
 #endif

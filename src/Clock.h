@@ -2,11 +2,11 @@
 #ifndef _CLOCK_H_
 #define _CLOCK_H_
 
-#include "Object.h"
+//#include "Object.h"
 
-class Clock : public Object {
+class Clock {
 public:
-
+    void test();
 };
 
 #endif

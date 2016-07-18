@@ -1,13 +1,13 @@
 // This is a .h file for the model: cube
 
-// Positions: 73
-// Texels: 110
-// Normals: 128
-// Faces: 142
-// Vertices: 426
+// Positions: 724
+// Texels: 1552
+// Normals: 1080
+// Faces: 1520
+// Vertices: 4560
 
 int cubeVertices;
-float cubePositions[1278];
-float cubeTexels[852];
-float cubeNormals[1278];
+float cubePositions[13680];
+float cubeTexels[9120];
+float cubeNormals[13680];
 

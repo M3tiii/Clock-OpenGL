@@ -2,9 +2,9 @@
 #ifndef _RACK_H_
 #define _RACK_H_
 
-#include "Object.h"
+//#include "Object.h"
 
-class Rack : public Object
+class Rack
 {
 public:
 

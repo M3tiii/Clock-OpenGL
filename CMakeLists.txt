@@ -28,7 +28,7 @@ include(src/CMakeLists.txt)
 
 add_executable (clock
         main.cpp
-        ${SOURCE_FILES})
+        ${SOURCE_FILES} src/Object.cpp)
 
 IF (APPLE)
     include_directories (/System/Library/Frameworks)

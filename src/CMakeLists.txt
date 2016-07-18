@@ -5,8 +5,12 @@ set (SOURCE_FILES
         src/Clock.cpp
         src/lodepng.h
         src/lodepng.cpp
+        src/shaderprogram.h
+        src/shaderprogram.cpp
+        src/fshader.txt
 #        src/loader.cpp
-#        src/Object.h
+        src/Object.h
+        src/Object.cpp
 #        src/Rack.h
 #        src/Rack.cpp
 )

@@ -311,5 +311,6 @@ int createModel(string pathhh, string nameObjjj)
     writeCpositions(filepathC, nameOBJ, model, faces, positions);
     writeCtexels(filepathC, nameOBJ, model, faces, texels);
     writeCnormals(filepathC, nameOBJ, model, faces, normals);
+
     return 0;
 }
