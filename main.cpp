@@ -191,12 +191,59 @@ void drawScene(GLFWwindow* window, float angle_x, float angle_y) {
     glfwSwapBuffers(window);
 }
 
+void drawObject(Objects::Object object, ShaderProgram *shaderProgram,mat4 modelV, mat4 modelP, float rotation_x,float rotation_y, vec3 mrotation, vec3 mtranslate, vec3 mscale) {
+
+    //WYKORZYSTANIE SHADERÓW XXX
+//    shaderProgram->use();
+//
+//    glUniformMatrix4fv(shaderProgram->getUniformLocation("P"), 1, false, glm::value_ptr(modelP));
+//    glUniformMatrix4fv(shaderProgram->getUniformLocation("V"), 1, false, glm::value_ptr(modelV));
+//    glUniformMatrix4fv(shaderProgram->getUniformLocation("M"), 1, false, glm::value_ptr(modelMatrix));
+//    glUniform4f(shaderProgram->getUniformLocation("lightPos0"), 0, 2, 0, 1); //Przekazanie wspó³rzêdnych Ÿród³a œwiat³a do zmiennej jednorodnej lightPos0
+//
+//    glUniform1i(shaderProgram->getUniformLocation("WRITE SOURCE TO TEXTURE"), 0); //SET LOCATION TO TEXTURE
+//    glActiveTexture(GL_TEXTURE0);
+//    glBindTexture(GL_TEXTURE_2D, object.texModel);
+//
+//    glBindVertexArray(object.objectVao);
+//
+//    glDrawArrays(GL_TRIANGLES, 0, object.verCount);
+//
+//    glBindVertexArray(0);
+    //KONIEC
+
+
+    //WERSJA BEZ SHADERÓW XXX
+
+    glm::mat4 modelMatrix;
+    modelMatrix = translate(modelMatrix, object.translate); //Pozycja
+    modelMatrix = scale(modelMatrix, object.scale);
+    modelMatrix = rotate(modelMatrix, object.rotate.x, vec3(1, 0, 0));
+    modelMatrix = rotate(modelMatrix, object.rotate.y, vec3(0, 1, 0));
+    modelMatrix = rotate(modelMatrix, object.rotate.z, vec3(0, 0, 1));
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadMatrixf(value_ptr(V*modelMatrix));
+
+    glBindTexture(GL_TEXTURE_2D, object.texModel);
+
+    glEnableClientState(GL_VERTEX_ARRAY); //W³¹cz u¿ywanie tablicy wierzcho³ków
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY); //Włącz używanie tablicy współrzędnych teksturowania
+    glVertexPointer(3, GL_FLOAT, 0, object.vertices); //Wska¿ tablicê wierzcho³ków
+    glTexCoordPointer(2, GL_FLOAT, 0, object.vtexture); //Zdefiniuj tablicę, która jest źródłem współrzędnych teksturowania
+
+    glDrawArrays(GL_TRIANGLES, 0, object.verCount);
+
+    glDisableClientState(GL_VERTEX_ARRAY); //Wy³¹cz u¿ywanie tablicy wierzcho³ków
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY); //Wyłącz używanie tablicy współrzędnych teksturowania
+    //KONIEC
+}
 
 int createAllModels() {
     World.push_back( Object(3, "sTip", "/Users/kon/GitHub/clock-project/source/metal.png",
                             "/Users/kon/GitHub/clock-project/source/metal.png", vec3(0,0,0), vec3(0,0,0), vec3(1,1,1)) );
-    World.push_back( Object(4, "lTip", "/Users/kon/GitHub/clock-project/source/metal.png",
-                            "/Users/kon/GitHub/clock-project/source/metal.png", vec3(0,0,0), vec3(0,0,0), vec3(1,1,1)) );
+//    World.push_back( Object(4, "lTip", "/Users/kon/GitHub/clock-project/source/metal.png",
+//                            "/Users/kon/GitHub/clock-project/source/metal.png", vec3(0,0,0), vec3(0,0,0), vec3(1,1,1)) );
 
     if(loadModels) {
 //        createModel("/Users/kon/GitHub/clock-project/", "cube");
@@ -235,43 +282,6 @@ int createAllModels() {
 
 }
 
-void drawObject(Objects::Object object, ShaderProgram *shaderProgram,mat4 modelV, mat4 modelP, float rotation_x,float rotation_y, vec3 mrotation, vec3 mtranslate, vec3 mscale) {
-
-    //WYKORZYSTANIE SHADERÓW XXX
-//    shaderProgram->use();
-//
-//    glUniformMatrix4fv(shaderProgram->getUniformLocation("P"), 1, false, glm::value_ptr(modelP));
-//    glUniformMatrix4fv(shaderProgram->getUniformLocation("V"), 1, false, glm::value_ptr(modelV));
-//    glUniformMatrix4fv(shaderProgram->getUniformLocation("M"), 1, false, glm::value_ptr(modelMatrix));
-//    glUniform4f(shaderProgram->getUniformLocation("lightPos0"), 0, 2, 0, 1); //Przekazanie wspó³rzêdnych Ÿród³a œwiat³a do zmiennej jednorodnej lightPos0
-//
-//    glUniform1i(shaderProgram->getUniformLocation("WRITE SOURCE TO TEXTURE"), 0); //SET LOCATION TO TEXTURE
-//    glActiveTexture(GL_TEXTURE0);
-//    glBindTexture(GL_TEXTURE_2D, object.texModel);
-//
-//    glBindVertexArray(object.objectVao);
-//
-//    glDrawArrays(GL_TRIANGLES, 0, object.verCount);
-//
-//    glBindVertexArray(0);
-    //KONIEC
-
-
-    //WERSJA BEZ SHADERÓW XXX
-    glBindTexture(GL_TEXTURE_2D, object.texModel);
-
-    glEnableClientState(GL_VERTEX_ARRAY); //W³¹cz u¿ywanie tablicy wierzcho³ków
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY); //Włącz używanie tablicy współrzędnych teksturowania
-    glVertexPointer(3, GL_FLOAT, 0, object.vertices); //Wska¿ tablicê wierzcho³ków
-    glTexCoordPointer(2, GL_FLOAT, 0, object.vtexture); //Zdefiniuj tablicę, która jest źródłem współrzędnych teksturowania
-
-    glDrawArrays(GL_TRIANGLES, 0, object.verCount);
-
-    glDisableClientState(GL_VERTEX_ARRAY); //Wy³¹cz u¿ywanie tablicy wierzcho³ków
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY); //Wyłącz używanie tablicy współrzędnych teksturowania
-    //KONIEC
-}
-
 
 int main(int argc, char *argv[]) {
 
@@ -302,8 +312,6 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    test = new Objects::Object(0, "cube", "/Users/kon/GitHub/clock-project/source/metal.png",
-                               "/Users/kon/GitHub/clock-project/source/metal.png", vec3(0,0,0), vec3(0,0,0), vec3(0.1,0.1,0.1));
     createAllModels();
 
     initOpenGLProgram(window); //Operacje inicjujące
